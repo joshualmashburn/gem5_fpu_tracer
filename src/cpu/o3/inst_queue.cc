@@ -43,6 +43,8 @@
 
 #include <limits>
 #include <vector>
+#include <iostream>
+#include <iomanip>
 
 #include "base/logging.hh"
 #include "cpu/o3/dyn_inst.hh"
@@ -666,6 +668,23 @@ InstructionQueue::getInstToExecute()
     instsToExecute.pop_front();
     if (inst->isFloating()) {
         iqIOStats.fpInstQueueReads++;
+        if((inst->staticInst->opClass() != gem5::enums::OpClass::FloatMemRead) &&
+            (inst->staticInst->opClass() != gem5::enums::OpClass::FloatMemWrite))
+        {
+          // output FPU trace here
+          // Cycle     :numsrc  :numdst  :op_class class:mnemonic xxx:reg sources :
+          std::cout.setf(std::ios::fixed);
+          std::cout << std::setfill('0') << std::setw(12) << std::setprecision(0) << cpu->baseStats.numCycles.value() << " ";
+          std::cout << "srcs " << inst->numSrcs(); // << " numdst " << inst->numDests() << " ";
+          std::cout << " opClass " << inst->staticInst->opClass() << " ";
+          //std::cout << inst->staticInst->disassemble(inst->staticInst->instAddr());
+          std::cout << inst->staticInst->getName() << " ";
+          for(int i=0; i < inst->numSrcs(); ++i) {
+            std::cout << inst->getRegOperand(inst->staticInst.get(), i) << " ";
+          }
+          //DPRINTF(IQ, "inst: %s\n", inst->staticInst->disassemble(inst->instAddr()));
+          std::cout << std::endl;
+        }
     } else if (inst->isVector()) {
         iqIOStats.vecInstQueueReads++;
     } else {
