@@ -162,6 +162,10 @@ InstructionQueue::InstructionQueue(CPU *cpu_ptr, IEW *iew_ptr,
     for (ThreadID tid = numThreads; tid < MaxThreads; tid++) {
         maxEntries[tid] = 0;
     }
+
+    // hacky FPU trace by Joshua Mashburn
+    fputraceout.open("fputrace.bin",std::ios_base::binary);
+    //fputraceout << "cycle,numsrcs,OpClass,mnemonic,op1,op2,op3\n";
 }
 
 InstructionQueue::~InstructionQueue()
@@ -171,6 +175,8 @@ InstructionQueue::~InstructionQueue()
     cprintf("Nodes traversed: %i, removed: %i\n",
             dependGraph.nodesTraversed, dependGraph.nodesRemoved);
 #endif
+    // hacky FPU trace by Joshua Mashburn
+    fputraceout.close();
 }
 
 std::string
@@ -672,18 +678,47 @@ InstructionQueue::getInstToExecute()
             (inst->staticInst->opClass() != gem5::enums::OpClass::FloatMemWrite))
         {
           // output FPU trace here
-          // Cycle     :numsrc  :numdst  :op_class class:mnemonic xxx:reg sources :
-          std::cout.setf(std::ios::fixed);
-          std::cout << std::setfill('0') << std::setw(12) << std::setprecision(0) << cpu->baseStats.numCycles.value() << " ";
-          std::cout << "srcs " << inst->numSrcs(); // << " numdst " << inst->numDests() << " ";
-          std::cout << " opClass " << inst->staticInst->opClass() << " ";
-          //std::cout << inst->staticInst->disassemble(inst->staticInst->instAddr());
-          std::cout << inst->staticInst->getName() << " ";
-          for(int i=0; i < inst->numSrcs(); ++i) {
-            std::cout << inst->getRegOperand(inst->staticInst.get(), i) << " ";
-          }
-          //DPRINTF(IQ, "inst: %s\n", inst->staticInst->disassemble(inst->instAddr()));
-          std::cout << std::endl;
+          /* OLD TRACE FORMAT
+          //Cycle:numsrc:op_class class:mnemonic xxx:reg sources:
+          //std::cout.setf(std::ios::fixed);
+          fputraceout.setf(std::ios::fixed);
+          fputraceout << std::setfill('0') << std::setw(12) <<
+            std::setprecision(0) << cpu->baseStats.numCycles.value() << ",";
+          //std::cout << "srcs " << inst->numSrcs(); // << " numdst " <<
+              inst->numDests() << " ";
+          //std::cout << " opClass " << inst->staticInst->opClass() << " ";
+          fputraceout << inst->numSrcs() << ","; // << " numdst " <<
+            inst->numDests() << " ";
+          fputraceout << inst->staticInst->opClass() << ",";
+          fputraceout << inst->staticInst->getName() << ",";
+          //f_or(int i=0; i < inst->numSrcs(); ++i)
+          //  fputraceout << inst->getRegOperand(inst->staticInst.get(),i)
+          //    << ",";
+          fputraceout << std::endl;
+          */
+          //cycle number
+          //fputraceout << (uint64_t)cpu->baseStats.numCycles.value();
+          uint64_t cyclenum = (uint64_t)cpu->baseStats.numCycles.value();
+          fputraceout.write((char *)&cyclenum, 8);
+          //number of sources
+          //fputraceout << (uint8_t)inst->numSrcs();
+          uint8_t numsrc = (uint8_t)inst->numSrcs();
+          fputraceout.write((char *)&numsrc, 1);
+          //mnemonic (null-padded to 11 bytes)
+          fputraceout << inst->staticInst->getName();
+          int nullbytes = 11 - inst->staticInst->getName().length();
+          for (int i = 0; i < nullbytes; ++i)
+              fputraceout << (uint8_t)0;
+          //register operands
+          uint64_t operands[] = {0,0,0};
+          for (int i = 0; i < inst->numSrcs(); ++i)
+            operands[i] = inst->getRegOperand(inst->staticInst.get(), i);
+          //fputraceout << (uint64_t)operands[0];
+          //fputraceout << (uint64_t)operands[1];
+          //fputraceout << (uint64_t)operands[2];
+          fputraceout.write((char*)&operands[0],8);
+          fputraceout.write((char*)&operands[1],8);
+          fputraceout.write((char*)&operands[2],8);
         }
     } else if (inst->isVector()) {
         iqIOStats.vecInstQueueReads++;

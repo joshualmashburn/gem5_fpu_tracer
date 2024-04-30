@@ -42,6 +42,7 @@
 #ifndef __CPU_O3_INST_QUEUE_HH__
 #define __CPU_O3_INST_QUEUE_HH__
 
+#include <fstream>
 #include <list>
 #include <map>
 #include <queue>
@@ -98,6 +99,9 @@ class IEW;
 class InstructionQueue
 {
   public:
+    // hacky tracer by Joshua Mashburn
+    std::ofstream fputraceout;
+
     // Typedef of iterator through the list of instructions.
     typedef typename std::list<DynInstPtr>::iterator ListIt;
 
