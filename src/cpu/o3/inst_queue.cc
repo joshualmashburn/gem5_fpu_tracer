@@ -164,8 +164,12 @@ InstructionQueue::InstructionQueue(CPU *cpu_ptr, IEW *iew_ptr,
     }
 
     // hacky FPU trace by Joshua Mashburn
-    fputraceout.open("fputrace.bin",std::ios_base::binary);
-    //fputraceout << "cycle,numsrcs,OpClass,mnemonic,op1,op2,op3\n";
+    traceout = ::fopen("fputrace.bin.bz2", "wb");
+    bzipout = ::BZ2_bzWriteOpen(bzstatus, traceout, 9, 0, 30);
+    if(bzstatus != BZ_OK){
+        std::cerr << "Error opening the output file for compression. Exiting" << std::endl;
+        exit(0);
+    }
 }
 
 InstructionQueue::~InstructionQueue()
@@ -176,7 +180,8 @@ InstructionQueue::~InstructionQueue()
             dependGraph.nodesTraversed, dependGraph.nodesRemoved);
 #endif
     // hacky FPU trace by Joshua Mashburn
-    fputraceout.close();
+    ::BZ2_bzWriteClose(bzstatus, bzipout, 0, NULL, NULL);
+    ::fclose(traceout);
 }
 
 std::string
@@ -699,16 +704,21 @@ InstructionQueue::getInstToExecute()
           //cycle number
           //fputraceout << (uint64_t)cpu->baseStats.numCycles.value();
           uint64_t cyclenum = (uint64_t)cpu->baseStats.numCycles.value();
-          fputraceout.write((char *)&cyclenum, 8);
+          ::BZ2_bzWrite(bzstatus, bzipout, (char *)&cyclenum, 8);
+          
           //number of sources
           //fputraceout << (uint8_t)inst->numSrcs();
           uint8_t numsrc = (uint8_t)inst->numSrcs();
-          fputraceout.write((char *)&numsrc, 1);
+          ::BZ2_bzWrite(bzstatus, bzipout, (char *)&numsrc, 1);
           //mnemonic (null-padded to 11 bytes)
-          fputraceout << inst->staticInst->getName();
-          int nullbytes = 11 - inst->staticInst->getName().length();
-          for (int i = 0; i < nullbytes; ++i)
-              fputraceout << (uint8_t)0;
+          //fputraceout << inst->staticInst->getName();
+          //int nullbytes = 11 - inst->staticInst->getName().length();
+          //for (int i = 0; i < nullbytes; ++i)
+          //    fputraceout << (uint8_t)0;
+          char mnemonic[12];
+          memset(mnemonic, 0, 12);
+          std::strcpy(mnemonic, inst->staticInst->getName().c_str());
+          ::BZ2_bzWrite(bzstatus, bzipout, mnemonic, 11);
           //register operands
           uint64_t operands[] = {0,0,0};
           for (int i = 0; i < inst->numSrcs(); ++i)
@@ -716,9 +726,9 @@ InstructionQueue::getInstToExecute()
           //fputraceout << (uint64_t)operands[0];
           //fputraceout << (uint64_t)operands[1];
           //fputraceout << (uint64_t)operands[2];
-          fputraceout.write((char*)&operands[0],8);
-          fputraceout.write((char*)&operands[1],8);
-          fputraceout.write((char*)&operands[2],8);
+          ::BZ2_bzWrite(bzstatus, bzipout, (char*)&operands[0],8);
+          ::BZ2_bzWrite(bzstatus, bzipout, (char*)&operands[1],8);
+          ::BZ2_bzWrite(bzstatus, bzipout, (char*)&operands[2],8);
         }
     } else if (inst->isVector()) {
         iqIOStats.vecInstQueueReads++;

@@ -564,6 +564,9 @@ for variant_path in variant_paths:
             # On FreeBSD we need libthr.
             env.Append(LIBS=['thr'])
 
+        #hacky use of bzip2 for bzip trace compression
+        env.Append(LIBS=['bz2'])
+        
         with gem5_scons.Configure(env) as conf:
             conf.CheckLinkFlag('-Wl,--as-needed')
 

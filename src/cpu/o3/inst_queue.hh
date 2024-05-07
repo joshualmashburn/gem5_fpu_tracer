@@ -42,7 +42,8 @@
 #ifndef __CPU_O3_INST_QUEUE_HH__
 #define __CPU_O3_INST_QUEUE_HH__
 
-#include <fstream>
+#include <bzlib.h>
+#include <cstdio>
 #include <list>
 #include <map>
 #include <queue>
@@ -100,8 +101,13 @@ class InstructionQueue
 {
   public:
     // hacky tracer by Joshua Mashburn
-    std::ofstream fputraceout;
-
+    //std::ofstream traceout;
+    //boost::iostreams::filtering_ostreambuf compressedout;
+    //std::ostream fputraceout{&compressedout};
+    FILE * traceout;
+    int * bzstatus;
+    BZFILE * bzipout;
+    
     // Typedef of iterator through the list of instructions.
     typedef typename std::list<DynInstPtr>::iterator ListIt;
 
