@@ -4,8 +4,8 @@ import sys
 
 NUM_CPUS=1
 
-GEM5_DIR="/home/grads/j/joshualmashburn/gem5/"
-OUT_DIR="/home/grads/j/joshualmashburn/gem5/output/"
+GEM5_DIR="/home/grads/j/joshualmashburn/gem5_fpu_tracer/"
+OUT_DIR="/home/grads/j/joshualmashburn/gem5_fpu_tracer/output/"
 EXE_PATH ="/home/grads/j/joshualmashburn/cpu2006/benchspec/CPU2006/"
 
 
